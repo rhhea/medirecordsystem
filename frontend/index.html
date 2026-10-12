@@ -1,0 +1,701 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MedChain</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/htm@3.1.1/dist/htm.umd.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.4/ethers.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<style>
+:root{
+  --ink:#0d1b2a; --ink2:#1b2b3f; --muted:#5d6b7c; --line:#dde3ec; --bg:#f2f4f8; --card:#fff;
+  --cobalt:#1f4fd8; --cobalt-d:#183fae; --cobalt-l:#e6edff;
+  --ok:#0f8a5f; --okbg:#e2f6ee; --warn:#a96400; --warnbg:#fdf0d8; --bad:#c93535; --badbg:#fde8e8;
+  --radius:10px;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font:15px/1.55 "Plus Jakarta Sans",system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+.mono,code{font-family:"JetBrains Mono",ui-monospace,monospace;font-size:12.5px}
+button{font:inherit;cursor:pointer}
+:focus-visible{outline:2px solid var(--cobalt);outline-offset:2px}
+
+/* top bar */
+.top{position:sticky;top:0;z-index:20;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 28px;background:var(--ink);color:#fff}
+.brand{display:flex;align-items:center;gap:10px;font-weight:800;font-size:18px;letter-spacing:-.2px}
+.mark{width:26px;height:26px;border-radius:7px;background:var(--cobalt);position:relative}
+.mark::before,.mark::after{content:"";position:absolute;background:#fff;border-radius:1px}
+.mark::before{left:11px;top:6px;width:4px;height:14px}.mark::after{left:6px;top:11px;width:14px;height:4px}
+.seg{display:flex;background:var(--ink2);border-radius:999px;padding:3px}
+.seg button{border:0;background:none;color:#9fb0c6;padding:6px 18px;border-radius:999px;font-weight:600}
+.seg button.on{background:#fff;color:var(--ink)}
+.right{display:flex;align-items:center;gap:10px}
+.acct{display:flex;align-items:center;gap:8px;background:var(--ink2);border:0;color:#fff;padding:7px 12px;border-radius:999px}
+.dot{width:8px;height:8px;border-radius:50%;background:#38d39f}
+.ghostb{background:none;border:1px solid #31445d;color:#d6e0ee;padding:7px 14px;border-radius:999px;font-weight:600}
+.badge{background:var(--cobalt);border-radius:999px;padding:0 7px;margin-left:6px;font-size:12px}
+
+/* layout */
+.wrap{max-width:1200px;margin:0 auto;padding:26px 28px 60px}
+.split{display:grid;grid-template-columns:350px minmax(0,1fr);gap:22px;align-items:start}
+@media(max-width:900px){.split{grid-template-columns:1fr}.top{padding:10px 14px;flex-wrap:wrap}.wrap{padding:16px 14px 40px}}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:18px 20px;margin-bottom:18px}
+.card h3{margin:0 0 4px;font-size:16px;font-weight:700}
+.sub{color:var(--muted);font-size:13px;margin:0 0 12px}
+.empty{padding:34px 20px;text-align:center;color:var(--muted)}
+.empty b{display:block;color:var(--ink);font-size:16px;margin-bottom:4px}
+
+/* hero */
+.hero{max-width:760px;margin:60px auto 0;text-align:left}
+.hero h1{font-size:46px;line-height:1.08;margin:0 0 14px;letter-spacing:-1.2px;font-weight:800}
+.hero p.lead{font-size:18px;color:var(--muted);max-width:560px;margin:0 0 24px}
+.flow{display:grid;grid-template-columns:repeat(4,1fr);gap:0;margin-top:40px;border:1px solid var(--line);border-radius:var(--radius);background:#fff;overflow:hidden}
+.flow div{padding:16px 16px;border-right:1px solid var(--line)}.flow div:last-child{border-right:0}
+.flow b{display:block;margin-bottom:2px}.flow span{color:var(--muted);font-size:13px}
+@media(max-width:700px){.flow{grid-template-columns:1fr 1fr}.hero h1{font-size:34px}}
+
+/* controls */
+.btn{border:1px solid var(--cobalt);background:var(--cobalt);color:#fff;padding:9px 16px;border-radius:8px;font-weight:600}
+.btn:hover{background:var(--cobalt-d)}
+.btn.sec{background:#fff;color:var(--cobalt)}
+.btn.danger{background:#fff;color:var(--bad);border-color:#efb6b6}
+.btn.danger:hover{background:var(--badbg)}
+.btn.dangerfill{background:var(--bad);border-color:var(--bad)}
+.btn.sm{padding:5px 11px;font-size:13px}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.input{width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:8px;font:inherit;background:#fff}
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}
+.chip{border:1px solid var(--line);background:#fff;border-radius:999px;padding:5px 13px;font-weight:600;color:var(--muted)}
+.chip.on{background:var(--cobalt-l);border-color:var(--cobalt);color:var(--cobalt)}
+.drop{display:block;border:1.5px dashed #b6c3d8;border-radius:var(--radius);padding:20px;text-align:center;color:var(--muted);cursor:pointer;background:#fafbfd}
+.drop:hover{border-color:var(--cobalt);color:var(--cobalt)}
+.drop input{display:none}
+.drop b{color:var(--ink)}
+
+/* records */
+.rec{display:flex;justify-content:space-between;align-items:center;gap:8px;width:100%;text-align:left;border:1px solid var(--line);background:#fff;border-radius:8px;padding:11px 13px;margin-top:8px}
+.rec:hover{border-color:#a9bde8}.rec.on{border-color:var(--cobalt);background:var(--cobalt-l)}
+.rec small{color:var(--muted)}
+.rec .n{font-weight:700}
+
+.pill{display:inline-block;padding:2px 10px;border-radius:999px;font-size:12.5px;font-weight:700;white-space:nowrap}
+.pill.active{background:var(--okbg);color:var(--ok)}.pill.expired{background:var(--warnbg);color:var(--warn)}
+.pill.revoked{background:var(--badbg);color:var(--bad)}.pill.none{background:#eceff4;color:var(--muted)}
+
+.dhead{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:flex-start}
+.dhead h2{margin:0;font-size:22px;letter-spacing:-.3px}
+.meta{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.tag{background:#eef1f6;border-radius:6px;padding:2px 8px;color:var(--muted)}
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin:16px 0 14px}
+.tabs button{border:0;background:none;padding:8px 14px;font-weight:600;color:var(--muted);border-bottom:2px solid transparent;margin-bottom:-1px}
+.tabs button.on{color:var(--cobalt);border-color:var(--cobalt)}
+
+.grant{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:11px 0;border-top:1px solid var(--line)}
+.grant:first-child{border-top:0}
+.grant .who{display:flex;align-items:center;gap:10px}
+.av{width:34px;height:34px;border-radius:50%;background:var(--cobalt-l);color:var(--cobalt);display:grid;place-items:center;font-weight:700;font-size:12px}
+.form{display:grid;grid-template-columns:1fr auto;gap:10px}
+@media(max-width:600px){.form{grid-template-columns:1fr}}
+
+.tl{list-style:none;margin:0;padding:0 0 0 6px;border-left:2px solid var(--line)}
+.tl li{position:relative;padding:0 0 16px 18px}
+.tl li::before{content:"";position:absolute;left:-8px;top:5px;width:10px;height:10px;border-radius:50%;background:var(--cobalt);border:2px solid #fff;box-shadow:0 0 0 1px var(--cobalt)}
+.tl li.denied::before,.tl li.revoked::before{background:var(--bad);box-shadow:0 0 0 1px var(--bad)}
+.tl li.tamper::before{background:var(--warn);box-shadow:0 0 0 1px var(--warn)}
+.tl .t{color:var(--muted);font-size:12.5px}
+
+.steps{list-style:none;margin:12px 0 0;padding:0}.steps li{color:var(--ink);padding:2px 0;font-size:13.5px}.steps li::before{content:"✓";color:var(--ok);font-weight:800;margin-right:8px}
+
+/* results */
+.res{border-radius:var(--radius);border:1px solid;padding:20px 22px}
+.res h2{margin:0 0 4px;font-size:22px}
+.res.ok{background:var(--okbg);border-color:#9bdcc2;color:#0a4d36}
+.res.bad{background:var(--badbg);border-color:#f0b4b4;color:#6d1a1a}
+.res.warn{background:var(--warnbg);border-color:#efcf94;color:#5c3900}
+.kv{display:grid;grid-template-columns:96px 1fr;gap:4px 12px;margin-top:12px;word-break:break-all}
+.kv span:nth-child(odd){opacity:.75}
+.fileview{margin-top:14px;background:#fff;border:1px solid var(--line);border-radius:8px;padding:12px;color:var(--ink)}
+.fileview pre{margin:0;white-space:pre-wrap;word-break:break-word;max-height:260px;overflow:auto;font-family:"JetBrains Mono",monospace;font-size:13px}
+.fileview img{max-width:100%}
+
+/* drawer + modal + toast */
+.scrim{position:fixed;inset:0;background:rgba(13,27,42,.4);z-index:30}
+.drawer{position:fixed;top:0;right:0;bottom:0;width:min(420px,100%);background:#fff;z-index:31;padding:20px;overflow:auto;box-shadow:-10px 0 30px rgba(0,0,0,.15)}
+.drawer h3{margin:0 0 12px}
+.tx{border:1px solid var(--line);border-radius:8px;padding:11px 13px;margin-bottom:10px}
+.tx .l{display:flex;justify-content:space-between;gap:8px;font-weight:700}
+.tx .s{font-size:12.5px;color:var(--muted)}
+.st-success{color:var(--ok)}.st-failed{color:var(--bad)}.st-pending,.st-waiting{color:var(--warn)}
+.modal{position:fixed;z-index:41;left:50%;top:50%;transform:translate(-50%,-50%);background:#fff;border-radius:var(--radius);padding:20px;width:min(560px,92%)}
+.modal pre{background:#f2f4f8;padding:12px;border-radius:8px;overflow:auto;margin:0 0 12px;white-space:pre-wrap;word-break:break-all}
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;padding:11px 18px;border-radius:8px;z-index:50;max-width:92%}
+.err{margin-top:16px;padding:12px 14px;border-radius:8px;background:var(--badbg);color:#6d1a1a;border:1px solid #f0b4b4}
+a{color:var(--cobalt);font-weight:600}
+
+/* polish */
+body{background:radial-gradient(900px 480px at 88% -120px,#dbe6ff 0,transparent 62%),radial-gradient(760px 420px at -8% 160px,#e3f4ec 0,transparent 58%),var(--bg);background-attachment:fixed}
+.card{border-radius:14px;box-shadow:0 1px 2px rgba(13,27,42,.04),0 10px 26px -14px rgba(13,27,42,.16)}
+.banner{position:relative;overflow:hidden;border-radius:18px;padding:26px 30px 24px;margin-bottom:22px;color:#fff;background:linear-gradient(135deg,#0d1b2a 0%,#14305e 58%,#1f4fd8 135%)}
+.banner::before{content:"";position:absolute;inset:0;background-image:linear-gradient(rgba(255,255,255,.055) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.055) 1px,transparent 1px);background-size:34px 34px;-webkit-mask-image:linear-gradient(115deg,transparent 25%,#000 100%);mask-image:linear-gradient(115deg,transparent 25%,#000 100%)}
+.banner>*{position:relative}
+.banner h1{margin:0;font-size:28px;letter-spacing:-.6px;font-weight:800}
+.banner p{margin:4px 0 0;color:#b9c8e0;max-width:560px}
+.live{display:inline-flex;align-items:center;gap:8px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.18);padding:4px 13px;border-radius:999px;font-size:12.5px;margin-bottom:16px}
+.live i{width:7px;height:7px;border-radius:50%;background:#38d39f;animation:pulse 2s infinite}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(56,211,159,.7)}70%,100%{box-shadow:0 0 0 7px rgba(56,211,159,0)}}
+@media(prefers-reduced-motion:reduce){.live i{animation:none}}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:22px}
+.stat{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);border-radius:12px;padding:13px 17px}
+.stat b{display:block;font-size:30px;line-height:1.1;letter-spacing:-.8px}
+.stat span{color:#b9c8e0;font-size:13px}
+@media(max-width:600px){.stats{grid-template-columns:1fr}.banner{padding:20px}}
+.fi{flex:none;width:38px;height:46px;border-radius:7px;display:grid;place-items:end center;padding-bottom:6px;font-size:10px;font-weight:800;color:#fff;background:#6b7a90;position:relative;overflow:hidden}
+.fi::before{content:"";position:absolute;top:0;right:0;width:13px;height:13px;background:rgba(255,255,255,.4);border-bottom-left-radius:7px}
+.fi.pdf{background:#d64545}.fi.img{background:#2f9e6b}.fi.doc{background:#2f6fd8}
+.rec{transition:border-color .15s,transform .15s}.rec:hover{transform:translateY(-1px)}
+.pipe{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:16px}
+.pipe div{position:relative;text-align:center;font-size:12.5px;color:var(--muted);padding-top:22px}
+.pipe div::before{content:"";position:absolute;top:0;left:50%;transform:translateX(-50%);width:15px;height:15px;border-radius:50%;background:#dde3ec}
+.pipe div::after{content:"";position:absolute;top:7px;left:calc(50% + 12px);right:calc(-50% + 12px);height:2px;background:#dde3ec}
+.pipe div:last-child::after{display:none}
+.pipe div.done{color:var(--ink);font-weight:600}.pipe div.done::before,.pipe div.done::after{background:var(--ok)}
+.pipe div.now::before{background:var(--cobalt)}
+.empty svg{display:block;margin:0 auto 10px}
+.empty{padding:40px 20px}
+.viewonly{position:relative;overflow:hidden;-webkit-user-select:none;user-select:none}
+.wm{position:absolute;inset:0;z-index:5;pointer-events:none;display:grid;grid-template-columns:repeat(2,1fr);align-content:space-around;overflow:hidden}
+.wm span{transform:rotate(-24deg);text-align:center;font:600 12px "JetBrains Mono",monospace;color:rgba(13,27,42,.16);padding:34px 0;white-space:nowrap}
+@media print{.viewonly{display:none!important}}
+a{color:var(--cobalt);font-weight:600}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script>
+const { useState, useEffect, useRef, useCallback } = React;
+const html = htm.bind(React.createElement);
+
+const short = (a) => a.slice(0, 6) + "…" + a.slice(-4);
+const FOREVER = 2n ** 40n;
+const fmtLeft = (s) => `${Math.floor(s / 60)}m ${String(s % 60).padStart(2, "0")}s`;
+const jfetch = async (url, opts) => { const r = await fetch(url, opts); const j = await r.json(); return { r, j }; };
+
+function fileKind(name) {
+  const ext = (name.split(".").pop() || "").toLowerCase();
+  if (ext === "pdf") return ["pdf", "PDF"];
+  if (["png", "jpg", "jpeg", "webp", "gif"].includes(ext)) return ["img", "IMG"];
+  if (ext === "docx" || ext === "doc") return ["doc", "DOC"];
+  return ["txt", "TXT"];
+}
+function FileIcon({ name }) { const [c, l] = fileKind(name); return html`<span className=${"fi " + c}>${l}</span>`; }
+function Illus() {
+  return html`<svg width="124" height="98" viewBox="0 0 124 98" fill="none" aria-hidden="true">
+    <rect x="22" y="10" width="48" height="64" rx="7" fill="#e6edff" stroke="#1f4fd8" stroke-width="2"/>
+    <path d="M32 28h28M32 38h28M32 48h16" stroke="#1f4fd8" stroke-width="2" stroke-linecap="round"/>
+    <path d="M84 38l22 9v15c0 15-11 24-22 28-11-4-22-13-22-28V47z" fill="#fff" stroke="#0d1b2a" stroke-width="2" stroke-linejoin="round"/>
+    <path d="M75 62l7 7 12-14" stroke="#0f8a5f" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+}
+function Banner({ app, title, sub, stats }) {
+  const [blk, setBlk] = useState(null);
+  useEffect(() => {
+    let on = true;
+    const t = async () => { try { const n = await app.w.provider.getBlockNumber(); if (on) setBlk(n); } catch {} };
+    t(); const i = setInterval(t, 3000);
+    return () => { on = false; clearInterval(i); };
+  }, []);
+  return html`<div className="banner">
+    <div className="live mono"><i></i>chain ${app.cfg.chainId} · block ${blk ?? "…"} · contract ${short(app.cfg.address)}</div>
+    <h1>${title}</h1><p>${sub}</p>
+    <div className="stats">${stats.map(([n, l]) => html`<div className="stat" key=${l}><b>${n}</b><span>${l}</span></div>`)}</div></div>`;
+}
+function usePatientStats(app, records) {
+  const [s, setS] = useState([0, 0, 0]);
+  const slow = Math.floor(useNow() / 5);
+  useEffect(() => {
+    if (!records) return;
+    (async () => {
+      const c = app.w.contract; const ids = new Set(records.map((r) => r.id));
+      const [g, a] = await Promise.all([c.queryFilter(c.filters.AccessGranted(null, app.w.account)), c.queryFilter(c.filters.RecordAccessed())]);
+      const pairs = new Map();
+      g.forEach((e) => pairs.set(e.args.id + ":" + e.args.doctor, [e.args.id, e.args.doctor]));
+      const exps = await Promise.all([...pairs.values()].map(([id, d]) => c.accessExpiry(id, d)));
+      const now = BigInt(Math.floor(Date.now() / 1000));
+      setS([records.length, exps.filter((x) => x > now).length, a.filter((e) => ids.has(e.args.id.toString()) && e.args.granted).length]);
+    })().catch(() => {});
+  }, [records, app.version, slow]);
+  return s;
+}
+function useDoctorOpens(app) {
+  const [n, setN] = useState(0);
+  useEffect(() => {
+    const c = app.w.contract;
+    c.queryFilter(c.filters.RecordAccessed(null, app.w.account)).then((ev) => setN(ev.filter((e) => e.args.granted).length)).catch(() => {});
+  }, [app.version]);
+  return n;
+}
+
+function useNow() {
+  const [n, setN] = useState(Math.floor(Date.now() / 1000));
+  useEffect(() => { const t = setInterval(() => setN(Math.floor(Date.now() / 1000)), 1000); return () => clearInterval(t); }, []);
+  return n;
+}
+function grantState(exp, now) {
+  if (exp === 0n) return { k: "revoked", label: "Revoked" };
+  if (exp >= FOREVER) return { k: "active", label: "Active · no expiry", on: true };
+  const left = Number(exp) - now;
+  return left > 0 ? { k: "active", label: "Active · " + fmtLeft(left), on: true } : { k: "expired", label: "Expired" };
+}
+
+function TxLink({ app, hash }) {
+  if (app.cfg.explorer) return html`<a href=${app.cfg.explorer + "/tx/" + hash} target="_blank" rel="noopener" className="mono">${short(hash)}</a>`;
+  return html`<a href="#" className="mono" onClick=${(e) => { e.preventDefault(); app.showTx(hash); }}>${short(hash)}</a>`;
+}
+
+/* ---------------- audit ---------------- */
+async function loadAudit(w, id) {
+  const c = w.contract;
+  const parts = await Promise.all([
+    c.queryFilter(c.filters.RecordUploaded(id)), c.queryFilter(c.filters.AccessGranted(id)),
+    c.queryFilter(c.filters.AccessRevoked(id)), c.queryFilter(c.filters.RecordAccessed(id)),
+  ]);
+  const evs = parts.flat().sort((a, b) => a.blockNumber - b.blockNumber || a.index - b.index);
+  const blocks = {};
+  await Promise.all([...new Set(evs.map((e) => e.blockNumber))].map(async (n) => { blocks[n] = (await w.provider.getBlock(n)).timestamp; }));
+  return evs.map((e) => {
+    const a = e.args; let cls = "", text = "";
+    if (e.eventName === "RecordUploaded") text = `Uploaded by ${short(a.patient)}`;
+    else if (e.eventName === "AccessGranted") text = `${short(a.patient)} gave ${short(a.doctor)} access · ` + (a.expiresAt >= FOREVER ? "no expiry" : "until " + new Date(Number(a.expiresAt) * 1000).toLocaleTimeString());
+    else if (e.eventName === "AccessRevoked") { cls = "revoked"; text = `${short(a.patient)} revoked access for ${short(a.doctor)}`; }
+    else if (!a.granted) { cls = "denied"; text = `${short(a.user)} tried to open the record and was denied`; }
+    else if (!a.integrityOk) { cls = "tamper"; text = `${short(a.user)} opened the record: hash mismatch flagged`; }
+    else text = `${short(a.user)} opened the record: integrity verified`;
+    return { key: e.transactionHash + e.index, cls, text, time: new Date(blocks[e.blockNumber] * 1000).toLocaleTimeString(), block: e.blockNumber, hash: e.transactionHash };
+  });
+}
+
+function Timeline({ app, id }) {
+  const [items, setItems] = useState(null);
+  useEffect(() => { loadAudit(app.w, id).then(setItems).catch((e) => app.say(e.message)); }, [id, app.version]);
+  if (!items) return html`<p className="sub">Loading…</p>`;
+  if (!items.length) return html`<p className="sub">No activity yet.</p>`;
+  return html`<ol className="tl">${items.map((i) => html`
+    <li key=${i.key} className=${i.cls}><div>${i.text}</div>
+      <div className="t">${i.time} · block ${i.block} · <${TxLink} app=${app} hash=${i.hash} /></div></li>`)}</ol>`;
+}
+
+/* ---------------- patient ---------------- */
+function UploadCard({ app, onDone }) {
+  const { w } = app;
+  const [file, setFile] = useState(null);
+  const [steps, setSteps] = useState([]);
+  const [busy, setBusy] = useState(false);
+  const add = (t) => setSteps((s) => [...s, t]);
+  async function go() {
+    if (!file) return;
+    setBusy(true); setSteps([]);
+    try {
+      const fd = new FormData(); fd.append("file", file);
+      const { r, j } = await jfetch("/api/upload", { method: "POST", body: fd });
+      if (!r.ok) throw new Error(j.error);
+      add("Fingerprinted with SHA-256"); add("Encrypted with AES-256-GCM"); add("Stored on IPFS (" + j.cid.slice(0, 12) + "…)");
+      const rc = await app.track("Anchor record on-chain", () => w.contract.uploadRecord(j.name, j.cid, j.fileHash));
+      const p = rc.logs.map((l) => { try { return w.contract.interface.parseLog(l); } catch { return null; } }).find((x) => x && x.name === "RecordUploaded");
+      const id = p.args.id.toString();
+      add("Anchored on-chain as record #" + id);
+      const b = await jfetch("/api/bind", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ token: j.token, recordId: id }) });
+      if (!b.r.ok) throw new Error(b.j.error);
+      setFile(null); app.bump(); onDone(id);
+    } catch (e) { app.say(e.reason || e.shortMessage || e.message); }
+    setBusy(false);
+  }
+  return html`<div className="card">
+    <h3>Add a record</h3><p className="sub">Encrypted before it leaves this app. Only its fingerprint goes on-chain.</p>
+    <label className="drop"><input type="file" accept=".pdf,.png,.jpg,.jpeg,.webp,.txt,.docx" onChange=${(e) => setFile(e.target.files[0] || null)} />
+      ${file ? html`<b>${file.name}</b>` : html`<b>Choose a report</b> (PDF, image or text)`}</label>
+    <div style=${{ marginTop: 12 }}><button className="btn" disabled=${!file || busy} onClick=${go}>${busy ? "Working…" : "Encrypt and upload"}</button></div>
+    ${(busy || steps.length > 0) && html`<div className="pipe">${["Hash", "Encrypt", "Store", "Anchor"].map((l, i) => html`<div key=${l} className=${i < steps.length ? "done" : i === steps.length ? "now" : ""}>${l}</div>`)}</div>
+      <p className="sub" style=${{ marginTop: 10, marginBottom: 0 }}>${steps[steps.length - 1] || "Starting…"}</p>`}
+  </div>`;
+}
+
+function AccessTab({ app, rec }) {
+  const { w } = app;
+  const now = useNow();
+  const [grants, setGrants] = useState([]);
+  const [doc, setDoc] = useState("");
+  const [dur, setDur] = useState(120);
+  const [busy, setBusy] = useState(false);
+  const load = useCallback(async () => {
+    const c = w.contract;
+    const [g, r] = await Promise.all([c.queryFilter(c.filters.AccessGranted(rec.id)), c.queryFilter(c.filters.AccessRevoked(rec.id))]);
+    const m = new Map();
+    [...g, ...r].forEach((e) => m.set(e.args.doctor.toLowerCase(), e.args.doctor));
+    const docs = [...m.values()];
+    const exps = await Promise.all(docs.map((d) => c.accessExpiry(rec.id, d)));
+    setGrants(docs.map((d, i) => ({ doctor: d, exp: exps[i] })));
+  }, [rec.id, w]);
+  useEffect(() => { load().catch((e) => app.say(e.message)); }, [load, app.version]);
+  async function grant() {
+    if (!ethers.isAddress(doc.trim())) return app.say("Enter a valid doctor wallet address.");
+    setBusy(true);
+    try { await app.track("Grant access", () => w.contract.grantAccess(rec.id, doc.trim(), dur)); setDoc(""); app.bump(); }
+    catch {}
+    setBusy(false);
+  }
+  async function revoke(d) {
+    try { await app.track("Revoke access", () => w.contract.revokeAccess(rec.id, d)); app.bump(); } catch {}
+  }
+  const opts = [[120, "2 minutes"], [3600, "1 hour"], [0, "No expiry"]];
+  return html`<div>
+    <h3 style=${{ margin: "0 0 4px", fontSize: 15 }}>Give a doctor access</h3>
+    <div className="form"><input className="input mono" placeholder="Doctor wallet address (0x…)" value=${doc} onChange=${(e) => setDoc(e.target.value)} />
+      <button className="btn" disabled=${busy} onClick=${grant}>Grant access</button></div>
+    <div className="chips">${opts.map(([v, l]) => html`<button key=${v} className=${"chip" + (dur === v ? " on" : "")} onClick=${() => setDur(v)}>${l}</button>`)}</div>
+    <h3 style=${{ margin: "18px 0 4px", fontSize: 15 }}>Who can open this record</h3>
+    ${grants.length === 0 && html`<p className="sub">Nobody yet. Only you can open it.</p>`}
+    ${grants.map((g) => { const s = grantState(g.exp, now); return html`
+      <div className="grant" key=${g.doctor}>
+        <div className="who"><div className="av">Dr</div><div><div className="mono">${short(g.doctor)}</div><span className=${"pill " + s.k}>${s.label}</span></div></div>
+        ${s.on && html`<button className="btn danger sm" onClick=${() => revoke(g.doctor)}>Revoke</button>`}
+      </div>`; })}
+  </div>`;
+}
+
+function DemoTab({ app, rec }) {
+  const [msg, setMsg] = useState("");
+  async function call(kind) {
+    const { r, j } = await jfetch(`/api/demo/${kind}/${rec.id}`, { method: "POST" });
+    setMsg(!r.ok ? j.error : kind === "tamper" ? "Stored file swapped for an altered copy. Open the record as the doctor to see the flag." : "Original file restored.");
+  }
+  return html`<div>
+    <p className="sub">Simulates a storage node serving an altered file for this record. Present this only for the demo.</p>
+    <div style=${{ display: "flex", gap: 10 }}>
+      <button className="btn dangerfill" onClick=${() => call("tamper")}>Tamper with stored file</button>
+      <button className="btn sec" onClick=${() => call("restore")}>Restore original</button></div>
+    ${msg && html`<p className="sub" style=${{ marginTop: 12 }}>${msg}</p>`}
+  </div>`;
+}
+
+function RecordDetail({ app, rec }) {
+  const [tab, setTab] = useState("access");
+  const tabs = [["access", "Access"], ["activity", "Activity"], ["demo", "Tamper test"]];
+  return html`<div className="card">
+    <div className="dhead"><div><h2>${rec.name}</h2>
+      <div className="meta"><span className="tag mono">Record #${rec.id}</span><span className="tag mono" title=${rec.cid}>CID ${rec.cid.slice(0, 12)}…</span>
+        <span className="tag mono" title=${rec.fileHash}>SHA-256 ${rec.fileHash.slice(0, 10)}…</span></div></div></div>
+    <div className="tabs">${tabs.map(([k, l]) => html`<button key=${k} className=${tab === k ? "on" : ""} onClick=${() => setTab(k)}>${l}</button>`)}</div>
+    ${tab === "access" && html`<${AccessTab} app=${app} rec=${rec} />`}
+    ${tab === "activity" && html`<${Timeline} app=${app} id=${rec.id} />`}
+    ${tab === "demo" && html`<${DemoTab} app=${app} rec=${rec} />`}
+  </div>`;
+}
+
+function PatientView({ app }) {
+  const { w } = app;
+  const [records, setRecords] = useState(null);
+  const [sel, setSel] = useState(null);
+  const load = useCallback(async (pick) => {
+    const c = w.contract;
+    const evs = await c.queryFilter(c.filters.RecordUploaded(null, w.account));
+    const list = await Promise.all(evs.map(async (ev) => {
+      const r = await c.records(ev.args.id);
+      return { id: ev.args.id.toString(), name: r.name, cid: r.cid, fileHash: r.fileHash, at: Number(r.uploadedAt) };
+    }));
+    list.sort((a, b) => Number(b.id) - Number(a.id));
+    setRecords(list);
+    setSel((s) => pick ?? s ?? (list[0] ? list[0].id : null));
+  }, [w]);
+  useEffect(() => { load().catch((e) => app.say(e.message)); }, [load]);
+  const rec = records && records.find((r) => r.id === sel);
+  const st = usePatientStats(app, records);
+  return html`<div>
+    <${Banner} app=${app} title="Your records" sub="Everything here is encrypted. You decide who can open it, and for how long."
+      stats=${[[st[0], "Records"], [st[1], "Active grants"], [st[2], "Times opened"]]} />
+    <div className="split">
+    <div>
+      <${UploadCard} app=${app} onDone=${(id) => load(id)} />
+      <div className="card"><h3>Your records</h3>
+        ${records && records.length === 0 && html`<p className="sub">No records yet.</p>`}
+        ${(records || []).map((r) => html`<button key=${r.id} className=${"rec" + (sel === r.id ? " on" : "")} onClick=${() => setSel(r.id)}>
+          <span style=${{ display: "flex", gap: 12, alignItems: "center" }}><${FileIcon} name=${r.name} /><span><span className="n">${r.name}</span><br /><small className="mono">#${r.id} · ${new Date(r.at * 1000).toLocaleDateString()}</small></span></span></button>`)}
+      </div>
+    </div>
+    <div>${rec ? html`<${RecordDetail} key=${rec.id} app=${app} rec=${rec} />`
+      : html`<div className="card empty"><${Illus} /><b>Select or add a record</b>Upload your first report to start sharing it with a doctor.</div>`}</div>
+  </div></div>`;
+}
+
+/* ---------------- doctor ---------------- */
+function PdfViewer({ bytes }) {
+  const box = useRef();
+  const [msg, setMsg] = useState("Rendering pages…");
+  useEffect(() => {
+    let dead = false;
+    const el = box.current;
+    (async () => {
+      try {
+        pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+        const pdf = await pdfjsLib.getDocument({ data: bytes.slice() }).promise;
+        const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
+        for (let n = 1; n <= pdf.numPages; n++) {
+          if (dead) return;
+          const page = await pdf.getPage(n);
+          const base = page.getViewport({ scale: 1 });
+          const vp = page.getViewport({ scale: (el.clientWidth / base.width) * dpr });
+          const c = document.createElement("canvas");
+          c.width = vp.width; c.height = vp.height;
+          c.style.cssText = "width:100%;display:block;margin-bottom:8px;background:#fff";
+          el.appendChild(c);
+          await page.render({ canvasContext: c.getContext("2d"), viewport: vp }).promise;
+          if (n === 1) setMsg("");
+        }
+      } catch (e) { if (!dead) setMsg("Could not render this PDF: " + e.message); }
+    })();
+    return () => { dead = true; while (el.firstChild) el.removeChild(el.firstChild); };
+  }, [bytes]);
+  return html`<div>
+    ${msg && html`<p className="sub">${msg}</p>`}
+    <div ref=${box} onContextMenu=${(e) => e.preventDefault()} style=${{ height: 520, overflow: "auto", background: "#e8ebf0", borderRadius: 6, border: "1px solid var(--line)" }}></div></div>`;
+}
+
+function ResultPanel({ app, res, hidden }) {
+  if (!res) return html`<div className="card empty"><${Illus} /><b>Nothing open</b>Open a record shared with you. The file appears here once the contract allows it and its hash checks out.</div>`;
+  const { j } = res;
+  const logLine = j.log && html`<div className="kv"><span>Audit entry</span><span><${TxLink} app=${app} hash=${j.log.txHash} /> · gas ${j.log.gasUsed}</span></div>`;
+  if (res.kind === "denied") return html`<div className="res bad"><h2>Access denied</h2>
+    The smart contract says this wallet has no active permission for record #${res.id}. The file was never decrypted, and this attempt is now in the audit trail.${logLine}</div>`;
+  if (res.kind === "tamper") return html`<div className="res warn"><h2>Integrity check failed. File withheld.</h2>${j.reason}
+    <div className="kv"><span>On-chain</span><code>${j.expectedHash}</code><span>Computed</span><code>${j.actualHash || "n/a (decryption failed)"}</code>
+    <span>CID served</span><code>${j.cidUsed}</code><span>CID on-chain</span><code>${j.originalCid}</code></div>${logLine}</div>`;
+  return html`<div className="res ok"><h2>${j.name}</h2>Access granted. The decrypted file matches the hash stored on-chain.
+    <div className="kv"><span>On-chain</span><code>${j.expectedHash}</code><span>Computed</span><code>${j.actualHash}</code></div>${logLine}
+    ${hidden && html`<p style=${{ margin: "12px 0 0", fontWeight: 700 }}>Content hidden while this window is not in focus.</p>`}
+    <div className="fileview viewonly" onContextMenu=${(e) => e.preventDefault()} style=${{ transition: "filter .1s", filter: hidden ? "blur(28px)" : "none" }}>
+      ${res.text != null && html`<pre>${res.text}</pre>`}
+      ${res.isImg && html`<img src=${res.url} alt="" draggable="false" />`}
+      ${res.isPdf && html`<${PdfViewer} bytes=${res.bytes} />`}
+      <p className="sub" style=${{ margin: "10px 0 0" }}>View only.</p></div></div>`;
+}
+
+function DoctorView({ app }) {
+  const { w } = app;
+  const now = useNow();
+  const [items, setItems] = useState(null);
+  const [res, setRes] = useState(null);
+  const [busy, setBusy] = useState(null);
+  const [manual, setManual] = useState("");
+  useEffect(() => {
+    (async () => {
+      const c = w.contract;
+      const evs = await c.queryFilter(c.filters.AccessGranted(null, null, w.account));
+      const ids = [...new Set(evs.map((e) => e.args.id.toString()))];
+      const list = await Promise.all(ids.map(async (id) => {
+        const [r, exp] = await Promise.all([c.records(id), c.accessExpiry(id, w.account)]);
+        return { id, name: r.name, patient: r.patient, exp };
+      }));
+      setItems(list.sort((a, b) => Number(b.id) - Number(a.id)));
+    })().catch((e) => app.say(e.message));
+  }, [w, app.version]);
+
+  async function open(id) {
+    if (!id) return;
+    setBusy(id); setRes(null);
+    try {
+      const ts = Math.floor(Date.now() / 1000);
+      const sig = await w.signer.signMessage(`MedChain access request\nrecord:${id}\nts:${ts}`);
+      const { r, j } = await jfetch(`/api/records/${id}/open`, { method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ address: w.account, timestamp: ts, signature: sig }) });
+      if (j.log) app.backendTx(j.granted ? "Access logged (granted)" : "Access logged (denied)", j.log);
+      if (j.granted === false) setRes({ kind: "denied", id, j });
+      else if (!r.ok) throw new Error(j.error);
+      else if (!j.integrityOk) setRes({ kind: "tamper", id, j });
+      else {
+        const bytes = Uint8Array.from(atob(j.data), (ch) => ch.charCodeAt(0));
+        const ext = (j.name.split(".").pop() || "").toLowerCase();
+        const mimes = { pdf: "application/pdf", png: "image/png", jpg: "image/jpeg", jpeg: "image/jpeg", webp: "image/webp", gif: "image/gif",
+          txt: "text/plain", csv: "text/csv", json: "application/json", md: "text/plain",
+          docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document" };
+        const url = URL.createObjectURL(new Blob([bytes], { type: mimes[ext] || "application/octet-stream" }));
+        const isImg = ["png", "jpg", "jpeg", "gif", "webp"].includes(ext);
+        const isPdf = ext === "pdf";
+        const text = ["txt", "csv", "json", "md"].includes(ext) ? new TextDecoder().decode(bytes) : null;
+        setRes({ kind: "ok", id, j, url, isImg, isPdf, text, bytes });
+      }
+      app.bump();
+    } catch (e) { app.say(e.shortMessage || e.message); }
+    setBusy(null);
+  }
+  const [hidden, setHidden] = useState(false);
+  useEffect(() => {
+    if (!res || res.kind !== "ok") return;
+    setHidden(false);
+    let t2;
+    const key = (e) => {
+      if ((e.ctrlKey || e.metaKey) && ["s", "p"].includes(e.key.toLowerCase())) e.preventDefault();
+      if (e.key === "PrintScreen") {
+        setHidden(true);
+        try { navigator.clipboard.writeText("Screenshots are disabled for this record."); } catch {}
+        clearTimeout(t2); t2 = setTimeout(() => setHidden(false), 1500);
+      }
+    };
+    const hide = () => setHidden(true);
+    const show = () => { if (!document.hidden) setHidden(false); };
+    const vis = () => setHidden(document.hidden);
+    window.addEventListener("keydown", key); window.addEventListener("keyup", key);
+    window.addEventListener("blur", hide); window.addEventListener("focus", show);
+    document.addEventListener("visibilitychange", vis);
+    const close = setTimeout(() => { setRes(null); app.say("Record closed after 2 minutes. Open it again to continue."); }, 120000);
+    return () => {
+      window.removeEventListener("keydown", key); window.removeEventListener("keyup", key);
+      window.removeEventListener("blur", hide); window.removeEventListener("focus", show);
+      document.removeEventListener("visibilitychange", vis);
+      clearTimeout(close); clearTimeout(t2); setHidden(false);
+    };
+  }, [res]);
+  const activeNow = (items || []).filter((it) => grantState(it.exp, now).on).length;
+  const opened = useDoctorOpens(app);
+  return html`<div>
+    <${Banner} app=${app} title="Shared with you" sub="Each open is checked against the contract, hash-verified, and written to the patient's audit trail."
+      stats=${[[(items || []).length, "Records shared"], [activeNow, "Active now"], [opened, "Opened by you"]]} />
+    <div className="split">
+    <div>
+      <div className="card"><h3>Shared with you</h3>
+        ${items && items.length === 0 && html`<p className="sub">No records have been shared with this wallet yet. Share your address with the patient, or try a record ID below.</p>`}
+        ${(items || []).map((it) => { const s = grantState(it.exp, now); return html`
+          <div className="rec" key=${it.id} style=${{ cursor: "default" }}>
+            <span style=${{ display: "flex", gap: 12, alignItems: "center" }}><${FileIcon} name=${it.name} /><span><span className="n">${it.name}</span><br /><small className="mono">#${it.id} · from ${short(it.patient)}</small><br /><span className=${"pill " + s.k}>${s.label}</span></span></span>
+            <button className="btn sm" disabled=${busy === it.id} onClick=${() => open(it.id)}>${busy === it.id ? "Opening…" : "Open"}</button>
+          </div>`; })}
+      </div>
+      <div className="card"><h3>Open by record ID</h3><p className="sub">For records you have not been given access to, the contract will refuse.</p>
+        <div className="form"><input className="input" type="number" min="1" placeholder="Record ID" value=${manual} onChange=${(e) => setManual(e.target.value)} />
+          <button className="btn sec" disabled=${!manual || !!busy} onClick=${() => open(manual)}>Request</button></div></div>
+    </div>
+    <div><${ResultPanel} app=${app} res=${res} hidden=${hidden} /></div>
+  </div></div>`;
+}
+
+/* ---------------- shell ---------------- */
+function Landing({ app }) {
+  return html`<div className="hero">
+    <h1>Medical records that answer to the patient.</h1>
+    <p className="lead">Files are encrypted, stored on IPFS, and opened only while a smart contract says the doctor has permission. Every attempt leaves a trace.</p>
+    <button className="btn" style=${{ padding: "12px 22px", fontSize: 16 }} onClick=${() => app.connect(false)}>Connect MetaMask</button>
+    ${app.err && html`<div className="err">${app.err}</div>`}
+    <div className="flow"><div><b>Encrypt</b><span>AES-256 in the backend</span></div><div><b>Store</b><span>Ciphertext on IPFS</span></div>
+      <div><b>Anchor</b><span>CID and SHA-256 on-chain</span></div><div><b>Verify</b><span>Hash re-checked on every open</span></div></div>
+  </div>`;
+}
+
+function App() {
+  const [cfg, setCfg] = useState(null);
+  const [w, setW] = useState(null);
+  const [role, setRole] = useState("patient");
+  const [txs, setTxs] = useState([]);
+  const [drawer, setDrawer] = useState(false);
+  const [modal, setModal] = useState(null);
+  const [toast, setToast] = useState("");
+  const [err, setErr] = useState("");
+  const [version, setVersion] = useState(0);
+  const timer = useRef();
+  const bump = () => setVersion((v) => v + 1);
+  const say = useCallback((m) => { setToast(m); clearTimeout(timer.current); timer.current = setTimeout(() => setToast(""), 4500); }, []);
+
+  const track = useCallback(async (label, fn) => {
+    const id = Math.random().toString(36).slice(2);
+    setTxs((t) => [{ id, label, status: "waiting" }, ...t]);
+    const upd = (p) => setTxs((t) => t.map((x) => (x.id === id ? { ...x, ...p } : x)));
+    try {
+      const tx = await fn();
+      upd({ status: "pending", hash: tx.hash });
+      const rc = await tx.wait();
+      upd({ status: rc.status === 1 ? "success" : "failed", block: rc.blockNumber, gasUsed: rc.gasUsed.toString(),
+        gasPrice: rc.gasPrice.toString(), fee: ethers.formatEther(rc.gasUsed * rc.gasPrice) });
+      return rc;
+    } catch (e) {
+      upd({ status: "failed", note: e.reason || e.shortMessage || e.message });
+      say(e.reason || e.shortMessage || e.message);
+      throw e;
+    }
+  }, [say]);
+  const backendTx = (label, l) => setTxs((t) => [{ id: l.txHash, label, status: l.status === 1 ? "success" : "failed", hash: l.txHash,
+    block: l.block, gasUsed: l.gasUsed, gasPrice: l.gasPrice, fee: l.fee, note: "Paid by the backend wallet" }, ...t]);
+
+  const connect = useCallback(async (silent) => {
+    setErr("");
+    if (!window.ethereum) { setErr("MetaMask was not found in this browser. Install the extension and reload."); return; }
+    try {
+      if (!silent) await window.ethereum.request({ method: "eth_requestAccounts" });
+      const want = "0x" + cfg.chainId.toString(16);
+      const cur = await window.ethereum.request({ method: "eth_chainId" });
+      if (cur.toLowerCase() !== want) { setErr("Switch MetaMask to the Hardhat Local network (chain ID " + cfg.chainId + "), then connect again."); return; }
+      const provider = new ethers.BrowserProvider(window.ethereum);
+      const signer = await provider.getSigner();
+      const account = await signer.getAddress();
+      const contract = new ethers.Contract(cfg.address, cfg.abi, signer);
+      let r = "patient";
+      try {
+        const mine = await contract.queryFilter(contract.filters.RecordUploaded(null, account));
+        if (!mine.length) { const sh = await contract.queryFilter(contract.filters.AccessGranted(null, null, account)); if (sh.length) r = "doctor"; }
+      } catch {}
+      setRole(r); setW({ provider, signer, account, contract });
+    } catch (e) { setErr(e.shortMessage || e.message || "Could not connect"); }
+  }, [cfg]);
+
+  useEffect(() => { fetch("/api/config").then((r) => r.json()).then(setCfg); }, []);
+  useEffect(() => {
+    if (!cfg || !window.ethereum) return;
+    window.ethereum.request({ method: "eth_accounts" }).then((a) => { if (a.length) connect(true); }).catch(() => {});
+    window.ethereum.on("accountsChanged", () => location.reload());
+    window.ethereum.on("chainChanged", () => location.reload());
+  }, [cfg]);
+
+  const showTx = async (hash) => {
+    try {
+      const [tx, rc] = await Promise.all([w.provider.getTransaction(hash), w.provider.getTransactionReceipt(hash)]);
+      setModal(JSON.stringify({ hash, from: tx.from, to: tx.to, block: rc.blockNumber, status: rc.status === 1 ? "success" : "failed", gasUsed: rc.gasUsed.toString() }, null, 2));
+    } catch (e) { say(e.message); }
+  };
+
+  if (!cfg) return html`<div className="wrap">Loading…</div>`;
+  const app = { cfg, w, track, backendTx, say, bump, version, showTx, connect, err };
+  const copy = () => { navigator.clipboard.writeText(w.account); say("Wallet address copied"); };
+
+  return html`<div>
+    <div className="top">
+      <div className="brand"><span className="mark"></span>MedChain</div>
+      ${w && html`<div className="seg"><button className=${role === "patient" ? "on" : ""} onClick=${() => setRole("patient")}>Patient</button>
+        <button className=${role === "doctor" ? "on" : ""} onClick=${() => setRole("doctor")}>Doctor</button></div>`}
+      <div className="right">
+        ${w && html`<button className="ghostb" onClick=${() => setDrawer(true)}>Transactions<span className="badge">${txs.length}</span></button>`}
+        ${w && html`<button className="acct mono" onClick=${copy} title="Copy full address"><span className="dot"></span>${short(w.account)}</button>`}
+      </div>
+    </div>
+    <div className="wrap">
+      ${!w ? html`<${Landing} app=${app} />` : role === "patient" ? html`<${PatientView} app=${app} />` : html`<${DoctorView} app=${app} />`}
+    </div>
+    ${drawer && html`<div className="scrim" onClick=${() => setDrawer(false)}></div>
+      <div className="drawer"><h3>Transactions and gas</h3>
+        ${txs.length === 0 && html`<p className="sub">Nothing sent yet.</p>`}
+        ${txs.map((t) => html`<div className="tx" key=${t.id}>
+          <div className="l"><span>${t.label}</span><span className=${"st-" + t.status}>${t.status}</span></div>
+          ${t.hash && html`<div className="s">tx <${TxLink} app=${app} hash=${t.hash} />${t.block ? " · block " + t.block : ""}</div>`}
+          ${t.gasUsed && html`<div className="s mono">gas ${t.gasUsed} · ${ethers.formatUnits(t.gasPrice, "gwei")} gwei · ${t.fee} ETH</div>`}
+          ${t.note && html`<div className="s">${t.note}</div>`}</div>`)}
+        <button className="btn sec" onClick=${() => setDrawer(false)}>Close</button></div>`}
+    ${modal && html`<div className="scrim" style=${{ zIndex: 40 }} onClick=${() => setModal(null)}></div>
+      <div className="modal"><pre className="mono">${modal}</pre><button className="btn sec" onClick=${() => setModal(null)}>Close</button></div>`}
+    ${toast && html`<div className="toast">${toast}</div>`}
+  </div>`;
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(html`<${App} />`);
+</script>
+</body>
+</html>

@@ -1,0 +1,8 @@
+node_modules
+.env
+backend/db.json
+backend/contract.json
+backend/mock-ipfs
+artifacts
+cache
+typechain-types
